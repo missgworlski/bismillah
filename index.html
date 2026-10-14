@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Elm Asa Baru — Archive</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Alegreya:ital,wght@0,400;0,500;0,700;1,400&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --textColor: #1d2731;
+      --matteBackgroundColor: #c3aa97;
+      --primaryAccentColor: #0b3c5d;
+      --primaryAccentHighlightColor: #328cc1;
+      --lightGrayColor: #e0e5e5;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: var(--matteBackgroundColor);
+      font-family: 'Open Sans', sans-serif;
+      color: var(--textColor);
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    /* Floating Top UI */
+    .catalog-view-button {
+      position: fixed;
+      top: 18px;
+      left: 18px;
+      z-index: 100;
+    }
+
+    .catalog-view-button a, .catalog-view-button button {
+      background: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      color: var(--textColor);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      border-radius: 9999px;
+      padding: 9px 20px;
+      font-family: 'Open Sans', sans-serif;
+      font-size: 0.88rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .catalog-view-button button:hover {
+      background: #ffffff;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+    }
+
+    .catalog-view-button svg {
+      width: 15px;
+      height: 15px;
+      fill: currentColor;
+    }
+
+    .status-hud {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 100;
+      background: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(6px);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: rgba(29, 39, 49, 0.7);
+      pointer-events: none;
+    }
+
+    /* Infinite Canvas Viewport */
+    .viewport {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      touch-action: none;
+      cursor: grab;
+    }
+
+    .viewport:active {
+      cursor: grabbing;
+    }
+
+    .canvas {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform-origin: 0 0;
+      will-change: transform;
+      transform-style: preserve-3d;
+    }
+
+    /* Artifact Items */
+    .item {
+      position: absolute;
+      transform-origin: center center;
+      transition: transform 0.25s ease, filter 0.25s ease;
+      cursor: pointer;
+    }
+
+    .item:hover {
+      z-index: 50;
+      transform: scale(1.035) translateZ(0);
+      filter: drop-shadow(0 14px 28px rgba(0, 0, 0, 0.22));
+    }
+
+    .item .card {
+      background: #fff;
+      padding: 10px 10px 14px 10px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .item img {
+      width: 100%;
+      height: auto;
+      display: block;
+      object-fit: cover;
+      pointer-events: none;
+      background: #e6ded7;
+    }
+
+    .item .caption {
+      margin-top: 10px;
+      font-family: 'Alegreya', serif;
+      font-size: 1rem;
+      line-height: 1.25;
+      color: var(--textColor);
+      font-style: italic;
+      text-align: center;
+    }
+
+    /* Inspection Lightbox */
+    .lightbox {
+      position: fixed;
+      inset: 0;
+      background: rgba(19, 23, 27, 0.85);
+      backdrop-filter: blur(12px);
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+
+    .lightbox.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .lightbox-content {
+      max-width: 900px;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .lightbox-content img {
+      max-height: 75vh;
+      max-width: 100%;
+      object-fit: contain;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    }
+
+    .lightbox-caption {
+      margin-top: 16px;
+      font-family: 'Alegreya', serif;
+      font-size: 1.4rem;
+      color: #fff;
+      text-align: center;
+    }
+
+    .lightbox-close {
+      position: absolute;
+      top: 24px;
+      right: 28px;
+      color: #fff;
+      font-size: 2rem;
+      background: none;
+      border: none;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="catalog-view-button">
+    <button id="resetViewBtn">
+      <svg viewBox="0 0 24 24">
+        <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 15h-2v-6h2zm0-8h-2V7h2z"/>
+      </svg>
+      Reset Perspective
+    </button>
+  </div>
+
+  <div class="status-hud" id="hud">Pan &amp; Scroll to Explore</div>
+
+  <div class="viewport" id="viewport">
+    <div class="canvas" id="canvas">
+      <!-- Items dynamically populated via JS -->
+    </div>
+  </div>
+
+  <div class="lightbox" id="lightbox">
+    <button class="lightbox-close" id="lightboxClose">&times;</button>
+    <div class="lightbox-content">
+      <img id="lightboxImg" src="" alt="Selected Artifact">
+      <div class="lightbox-caption" id="lightboxCaption"></div>
+    </div>
+  </div>
+
+  <script>
+    const itemsData = [
+      { id: 1, title: "Botanical Specimen No. 14", width: 260, x: -140, y: -180, img: "https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=600&auto=format&fit=crop&q=80" },
+      { id: 2, title: "Celestial Planisphere (1684)", width: 340, x: 200, y: -320, img: "https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=600&auto=format&fit=crop&q=80" },
+      { id: 3, title: "Studies of Ornithology", width: 280, x: -480, y: -260, img: "https://images.unsplash.com/photo-1582561149933-4028bbe43953?w=600&auto=format&fit=crop&q=80" },
+      { id: 4, title: "Atlas of Comparative Anatomy", width: 320, x: 180, y: 140, img: "https://images.unsplash.com/photo-1577083552431-6e5fd01aa342?w=600&auto=format&fit=crop&q=80" },
+      { id: 5, title: "Etchings of the Roman Forum", width: 300, x: -220, y: 220, img: "https://images.unsplash.com/photo-1579783928621-7a13d66a62d1?w=600&auto=format&fit=crop&q=80" },
+      { id: 6, title: "Flora of the Alpine Valleys", width: 250, x: -620, y: 120, img: "https://images.unsplash.com/photo-1544717302-de2939b7ef71?w=600&auto=format&fit=crop&q=80" },
+      { id: 7, title: "Chromolithograph Spectrum Study", width: 330, x: 580, y: -120, img: "https://images.unsplash.com/photo-1578328819058-b69f3a3b0f6b?w=600&auto=format&fit=crop&q=80" },
+      { id: 8, title: "Manuscript Fragment on Geometry", width: 290, x: 560, y: 260, img: "https://images.unsplash.com/photo-1578925518470-4def7a0f08bb?w=600&auto=format&fit=crop&q=80" }
+    ];
+
+    const canvas = document.getElementById('canvas');
+    const viewport = document.getElementById('viewport');
+    const lightbox = document.getElementById('lightbox');
+    const lightboxImg = document.getElementById('lightboxImg');
+    const lightboxCaption = document.getElementById('lightboxCaption');
+    const lightboxClose = document.getElementById('lightboxClose');
+    const resetViewBtn = document.getElementById('resetViewBtn');
+
+    // Populate gallery items
+    itemsData.forEach(item => {
+      const el = document.createElement('div');
+      el.className = 'item';
+      el.style.width = `${item.width}px`;
+      el.style.left = `${item.x}px`;
+      el.style.top = `${item.y}px`;
+      el.innerHTML = `
+        <div class="card">
+          <img src="${item.img}" alt="${item.title}" loading="lazy">
+          <div class="caption">${item.title}</div>
+        </div>
+      `;
+      el.addEventListener('click', (e) => {
+        if (!hasMoved) openLightbox(item);
+      });
+      canvas.appendChild(el);
+    });
+
+    // Viewport State
+    let scale = 1;
+    let panX = 0;
+    let panY = 0;
+    let isDragging = false;
+    let startX = 0, startY = 0;
+    let hasMoved = false;
+
+    function updateTransform() {
+      canvas.style.transform = `translate3d(${panX}px, ${panY}px, 0px) scale(${scale})`;
+    }
+
+    // Mouse / Pointer Drag
+    viewport.addEventListener('pointerdown', (e) => {
+      if (e.target.closest('.item')) return;
+      isDragging = true;
+      hasMoved = false;
+      startX = e.clientX - panX;
+      startY = e.clientY - panY;
+      viewport.setPointerCapture(e.pointerId);
+    });
+
+    viewport.addEventListener('pointermove', (e) => {
+      if (!isDragging) return;
+      const dx = Math.abs(e.clientX - (startX + panX));
+      const dy = Math.abs(e.clientY - (startY + panY));
+      if (dx > 3 || dy > 3) hasMoved = true;
+      panX = e.clientX - startX;
+      panY = e.clientY - startY;
+      updateTransform();
+    });
+
+    viewport.addEventListener('pointerup', (e) => {
+      isDragging = false;
+      try { viewport.releasePointerCapture(e.pointerId); } catch(err) {}
+    });
+
+    // Mouse Wheel Zoom
+    viewport.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const zoomFactor = 1.08;
+      const direction = e.deltaY < 0 ? 1 : -1;
+      const newScale = direction > 0 ? scale * zoomFactor : scale / zoomFactor;
+
+      if (newScale >= 0.35 && newScale <= 3.0) {
+        const mouseX = e.clientX - window.innerWidth / 2;
+        const mouseY = e.clientY - window.innerHeight / 2;
+        panX -= (mouseX - panX) * (newScale / scale - 1);
+        panY -= (mouseY - panY) * (newScale / scale - 1);
+        scale = newScale;
+        updateTransform();
+      }
+    }, { passive: false });
+
+    // Reset View
+    resetViewBtn.addEventListener('click', () => {
+      scale = 1;
+      panX = 0;
+      panY = 0;
+      updateTransform();
+    });
+
+    // Lightbox Controls
+    function openLightbox(item) {
+      lightboxImg.src = item.img;
+      lightboxCaption.textContent = item.title;
+      lightbox.classList.add('active');
+    }
+
+    lightboxClose.addEventListener('click', () => lightbox.classList.remove('active'));
+    lightbox.addEventListener('click', (e) => {
+      if (e.target === lightbox) lightbox.classList.remove('active');
+    });
+
+    // Initial Transform
+    updateTransform();
+  </script>
+</body>
+</html>
